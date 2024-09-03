@@ -10,7 +10,7 @@ def parse_key_value_pair(pair):
     return key, value
 
 # Create the parser
-parser = argparse.ArgumentParser(description="Example script with generic key-value command-line parameters.")
+parser = argparse.ArgumentParser(description="Python BLHeli command-line configurator")
 
 parser.add_argument("port", help="Serial port")
 parser.add_argument("--baudrate", type=int, default=115200, help="Serial baudrate")
