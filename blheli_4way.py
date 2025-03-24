@@ -2,7 +2,7 @@ import serial
 import time
 import logging
 
-from blheli_protocol import BLHeliProtocol as protocol
+from blheli_protocol import BLHeliProtocol as protocol, BLHeliDecodingError
 
 class BLHeli4WayInterface:
     """
@@ -25,8 +25,6 @@ class BLHeli4WayInterface:
         try:
             self.serial_connection = serial.Serial(self.port, self.baudrate, timeout=1)
             self.log.info(f"Connected to {self.port} at {self.baudrate} baud.")
-            time.sleep(0.5)
-            self.flush_input()
         except serial.SerialException:
             raise Exception(f"Failed to connect to {self.port}")
 
@@ -38,7 +36,7 @@ class BLHeli4WayInterface:
     
     def flush_input(self):
         """Discard all pending serial data"""
-        self.serial_connection.flush()
+        self.serial_connection.reset_input_buffer()
 
     def send_command(self, command, address=0, payload=[0]):
         """Send a command to the ESC."""
@@ -90,8 +88,16 @@ class BLHeli4WayInterface:
     
     def test_alive(self):
         """Identify ESC (generate a startup tone) and assert that communication is working"""
-        self.send_command('interface_test_alive')
-        self.read_response()
+        for _ in range(3):
+            self.send_command('interface_test_alive')
+            try:
+                self.read_response()
+                return
+            except BLHeliDecodingError:
+                time.sleep(1.0)
+                self.flush_input()
+                continue
+        raise Exception("No ESC detected")
 
 if __name__ == '__main__':
 

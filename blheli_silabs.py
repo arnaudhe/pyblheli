@@ -62,7 +62,7 @@ class BlHeliSilabs(BLHeli4WayInterface):
         # Open serial port
         super().connect()
         self.flush_input()
-        # Test connection
+        # Test connection to activate FC passthrough
         self.test_alive()
         # Interface name
         self.log.info(f'Interface name: {self.get_name()}')
