@@ -1,6 +1,6 @@
 from blheli_4way import BLHeli4WayInterface
 from construct import Byte, Struct, Int16ub, Enum, Padding, Flag, PaddedString
-from blheli_log import log
+import logging
 
 class BlHeliSilabs(BLHeli4WayInterface):
     """
@@ -53,25 +53,26 @@ class BlHeliSilabs(BLHeli4WayInterface):
 
     ESC_CONFIG_FIELDS = ['motor_direction', 'ppm_min_throttle', 'ppm_max_throttle', 'ppm_center_throttle']
 
-    def __init__(self, port, baudrate=115200, count=4, verbose=False):
-        super().__init__(port, baudrate, count, verbose)
+    def __init__(self, port, baudrate=115200, count=4):
+        super().__init__(port, baudrate, count)
 
     def connect(self):
         """Connect serial port and test communication"""
+        self.log = logging.getLogger('blheli.silabs')
         # Open serial port
         super().connect()
         self.flush_input()
         # Test connection
         self.test_alive()
         # Interface name
-        log('Interface name:', self.get_name())
+        self.log.info(f'Interface name: {self.get_name()}')
 
     def probe_esc(self, esc):
         """Probe ESC instance and check interface type"""
         # Check parameter
         assert(esc >= 0 and esc < self.count)
         # Probe ESC and reset to deinit flash
-        log('Probing ESC #', esc + 1)
+        self.log.info(f'Probe ESC #{esc + 1}')
         interface_type = self.init_flash(esc)
         self.reset_esc()
         # Check interface type
@@ -82,6 +83,7 @@ class BlHeliSilabs(BLHeli4WayInterface):
         """Read config from device memory. Return a tuple containing (device_info, common_config, esc_config)"""
         # Check parameter
         assert(esc >= 0 and esc < self.count)
+        self.log.info(f'Read ESC #{esc + 1}')
         # Read EEPROM content from memory
         self.init_flash(esc)
         eeprom = self.EEPROM_LAYOUT.parse(self.read_memory(BlHeliSilabs.CONFIG_ADDRESS, self.EEPROM_LAYOUT.sizeof()))
@@ -103,13 +105,14 @@ class BlHeliSilabs(BLHeli4WayInterface):
                 common_config = esc_common_config
             else:
                 if common_config != esc_common_config:
-                    log(f"Warning : Common config mismatch for ESC #{esc + 1}")
+                    self.log.warning(f"Common config mismatch for ESC #{esc + 1}")
         return (common_config, escs)
 
     def write_config(self, esc, **params):
         """Read parameters into device config memory"""
         # Check parameter
         assert(esc >= 0 and esc < self.count)
+        self.log.info(f'Write ESC #{esc + 1}')
         # Read EEPROM content from memory
         self.init_flash(esc)
         eeprom = self.EEPROM_LAYOUT.parse(self.read_memory(BlHeliSilabs.CONFIG_ADDRESS, self.EEPROM_LAYOUT.sizeof()))
@@ -118,7 +121,7 @@ class BlHeliSilabs(BLHeli4WayInterface):
             if key in BlHeliSilabs.COMMON_CONFIG_FIELDS or key in BlHeliSilabs.ESC_CONFIG_FIELDS:
                 eeprom[key] = value
             else:
-                log('Invalid parameter', key)
+                self.log.error(f'Invalid parameter: {key}')
         # Write back config in memory
         self.erase_page(int(BlHeliSilabs.CONFIG_ADDRESS / BlHeliSilabs.PAGE_SIZE))
         self.write_memory(BlHeliSilabs.CONFIG_ADDRESS, self.EEPROM_LAYOUT.build(eeprom))
@@ -128,7 +131,6 @@ class BlHeliSilabs(BLHeli4WayInterface):
     def write_config_all(self, **params):
         """Read parameters into device config memory"""
         for esc in range(self.count):
-            log(f'ESC #{esc + 1}')
             self.write_config(esc, **params)
 
 if __name__ == '__main__':

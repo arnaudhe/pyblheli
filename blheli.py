@@ -1,6 +1,9 @@
 
 import argparse
 import json
+import logging
+import coloredlogs
+
 from blheli_silabs import BlHeliSilabs
 from blheli_atmel import BlHeliAtmel
 
@@ -34,11 +37,18 @@ set_config.add_argument("--params", nargs="+", action="append", type=parse_key_v
 # Parse the arguments
 args = parser.parse_args()
 
+coloredlogs.install(level=logging.INFO, fmt='%(asctime)s %(levelname)-8s %(name)-10s %(message)s')
+logger = logging.getLogger('blheli')
+
+# Setup log level
+if args.verbose:
+    coloredlogs.set_level('DEBUG')
+
 # Instanciate interface and connect to ESC
 if args.interface == 'silabs':
-    interface = BlHeliSilabs(args.port, args.baudrate, args.count, args.verbose)
+    interface = BlHeliSilabs(args.port, args.baudrate, args.count)
 else:
-    interface = BlHeliAtmel(args.port, args.baudrate, args.count, args.verbose)
+    interface = BlHeliAtmel(args.port, args.baudrate, args.count)
 
 try:
 
@@ -78,8 +88,6 @@ finally:
 if args.json:
     print(json.dumps({'status': status, 'data': data}))
 else:
-    print('----------------')
-    print('Status:', status)
-    print(data)
-
-
+    logger.info(f'Status: {status}')
+    if data:
+        print(data)

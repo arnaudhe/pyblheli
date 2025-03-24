@@ -1,7 +1,7 @@
 import serial
 import time
+import logging
 
-from blheli_log import log
 from blheli_protocol import BLHeliProtocol as protocol
 
 class BLHeli4WayInterface:
@@ -13,8 +13,8 @@ class BLHeli4WayInterface:
      * 4-way Arduino interface
     """
 
-    def __init__(self, port, baudrate=115200, count=4, verbose=False):
-        self.verbose = verbose
+    def __init__(self, port, baudrate=115200, count=4):
+        self.log = logging.getLogger('blheli.4way')
         self.count = count
         self.port = port
         self.baudrate = baudrate
@@ -24,7 +24,7 @@ class BLHeli4WayInterface:
         """Connect serial port"""
         try:
             self.serial_connection = serial.Serial(self.port, self.baudrate, timeout=1)
-            log(f"Connected to {self.port} at {self.baudrate} baud.")
+            self.log.info(f"Connected to {self.port} at {self.baudrate} baud.")
             time.sleep(0.5)
             self.flush_input()
         except serial.SerialException:
@@ -34,7 +34,7 @@ class BLHeli4WayInterface:
         """Disconnect serial port"""
         if self.serial_connection and self.serial_connection.is_open:
             self.serial_connection.close()
-            log("Disconnected.")
+            self.log.info("Disconnected.")
     
     def flush_input(self):
         """Discard all pending serial data"""
@@ -44,15 +44,13 @@ class BLHeli4WayInterface:
         """Send a command to the ESC."""
         frame = protocol.build(command, address, payload)
         self.serial_connection.write(frame)
-        if self.verbose:
-            log("->", frame.hex())
+        self.log.debug("->" + frame.hex())
         time.sleep(0.1)  # Short delay for ESC to process
 
     def read_response(self, expected_length=64):
         """Read and decode response from the ESC."""
         response = self.serial_connection.read(expected_length)
-        if self.verbose:
-            log("<-", response.hex())
+        self.log.debug("<-" + response.hex())
         return protocol.parse(response)
     
     def init_flash(self, esc):

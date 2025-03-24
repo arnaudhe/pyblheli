@@ -1,5 +1,5 @@
 from blheli_4way import BLHeli4WayInterface
-from blheli_log import log
+import logging
 
 class BlHeliAtmel(BLHeli4WayInterface):
     """
@@ -7,18 +7,19 @@ class BlHeliAtmel(BLHeli4WayInterface):
     !!! WARNING !!! This class is not fully implemented yet, and thus not working
     """
 
-    def __init__(self, port, baudrate=115200, count=4, verbose=False):
-        super().__init__(port, baudrate, count, verbose)
+    def __init__(self, port, baudrate=115200, count=4):
+        super().__init__(port, baudrate, count)
 
     def connect(self):
         """Connect serial port and test communication"""
+        self.log = logging.getLogger('blheli.atmel')
         # Open serial port
         super().connect()
         self.flush_input()
         # Test connection
         self.test_alive()
         # Interface name
-        log('Interface name:', self.get_name())
+        self.log.info(f'Interface name: {self.get_name()}')
 
     def read_config(self, esc):
         """Read config from device memory. Return a tuple containing (device_info, common_config, esc_config)"""
